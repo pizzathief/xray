@@ -2,12 +2,15 @@
 .. This extra page is a work around for sphinx not having any support for
 .. hiding an autosummary table.
 
-.. currentmodule:: xray
+.. currentmodule:: xarray
 
 .. autosummary::
    :toctree: generated/
 
    auto_combine
+
+   Dataset.nbytes
+   Dataset.chunks
 
    Dataset.all
    Dataset.any
@@ -21,13 +24,6 @@
    Dataset.sum
    Dataset.std
    Dataset.var
-
-   Dataset.isnull
-   Dataset.notnull
-   Dataset.count
-   Dataset.dropna
-   Dataset.fillna
-   Dataset.where
 
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
@@ -44,11 +40,18 @@
    Dataset.round
    Dataset.real
    Dataset.T
+   Dataset.cumsum
+   Dataset.cumprod
+   Dataset.rank
 
    DataArray.ndim
+   DataArray.nbytes
    DataArray.shape
    DataArray.size
    DataArray.dtype
+   DataArray.nbytes
+   DataArray.chunks
+
    DataArray.astype
    DataArray.item
 
@@ -65,13 +68,6 @@
    DataArray.std
    DataArray.var
 
-   DataArray.isnull
-   DataArray.notnull
-   DataArray.count
-   DataArray.dropna
-   DataArray.fillna
-   DataArray.where
-
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first
    core.groupby.DataArrayGroupBy.last
@@ -87,6 +83,9 @@
    DataArray.round
    DataArray.real
    DataArray.T
+   DataArray.cumsum
+   DataArray.cumprod
+   DataArray.rank
 
    ufuncs.angle
    ufuncs.arccos

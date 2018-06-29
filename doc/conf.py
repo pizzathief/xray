@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# xray documentation build configuration file, created by
+# xarray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -11,136 +11,40 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
+from __future__ import absolute_import, division, print_function
 
-import sys
+import datetime
+import importlib
 import os
+import sys
 
-print "python exec:", sys.executable
-print "sys.path:", sys.path
-try:
-    import numpy
-    print "numpy: %s, %s" % (numpy.__version__, numpy.__file__)
-except ImportError:
-    print "no numpy"
-try:
-    import scipy
-    print "scipy: %s, %s" % (scipy.__version__, scipy.__file__)
-except ImportError:
-    print "no scipy"
-try:
-    import pandas
-    print "pandas: %s, %s" % (pandas.__version__, pandas.__file__)
-except ImportError:
-    print "no pandas"
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-    print "matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__)
-except ImportError:
-    print "no matplotlib"
-try:
-    import IPython
-    print "ipython: %s, %s" % (IPython.__version__, IPython.__file__)
-except ImportError:
-    print "no ipython"
-try:
-    import seaborn
-    print "seaborn: %s, %s" % (seaborn.__version__, seaborn.__file__)
-except ImportError:
-    print "no seaborn"
+import xarray
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+allowed_failures = set()
 
-# Monkey patch inspect.findsource to work around a Python bug that manifests on
-# RTD. Copied from IPython.core.ultratb.
-# Reference: https://github.com/ipython/ipython/issues/1456
+print("python exec:", sys.executable)
+print("sys.path:", sys.path)
+for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
+             'cartopy netCDF4 rasterio zarr').split():
+    try:
+        module = importlib.import_module(name)
+        if name == 'matplotlib':
+            module.use('Agg')
+        fname = module.__file__.rstrip('__init__.py')
+        print("%s: %s, %s" % (name, module.__version__, fname))
+    except ImportError:
+        print("no %s" % name)
+        # neither rasterio nor cartopy should be hard requirements for
+        # the doc build.
+        if name == 'rasterio':
+            allowed_failures.update(['gallery/plot_rasterio_rgb.py',
+                                     'gallery/plot_rasterio.py'])
+        elif name == 'cartopy':
+            allowed_failures.update(['gallery/plot_cartopy_facetgrid.py',
+                                     'gallery/plot_rasterio_rgb.py',
+                                     'gallery/plot_rasterio.py'])
 
-import linecache
-import re
-from inspect import getsourcefile, getfile, getmodule,\
-     ismodule, isclass, ismethod, isfunction, istraceback, isframe, iscode
-
-def findsource(object):
-    """Return the entire source file and starting line number for an object.
-
-    The argument may be a module, class, method, function, traceback, frame,
-    or code object.  The source code is returned as a list of all the lines
-    in the file and the line number indexes a line in that list.  An IOError
-    is raised if the source code cannot be retrieved.
-
-    FIXED version with which we monkeypatch the stdlib to work around a bug."""
-
-    file = getsourcefile(object) or getfile(object)
-    # If the object is a frame, then trying to get the globals dict from its
-    # module won't work. Instead, the frame object itself has the globals
-    # dictionary.
-    globals_dict = None
-    if inspect.isframe(object):
-        # XXX: can this ever be false?
-        globals_dict = object.f_globals
-    else:
-        module = getmodule(object, file)
-        if module:
-            globals_dict = module.__dict__
-    lines = linecache.getlines(file, globals_dict)
-    if not lines:
-        raise IOError('could not get source code')
-
-    if ismodule(object):
-        return lines, 0
-
-    if isclass(object):
-        name = object.__name__
-        pat = re.compile(r'^(\s*)class\s*' + name + r'\b')
-        # make some effort to find the best matching class definition:
-        # use the one with the least indentation, which is the one
-        # that's most probably not inside a function definition.
-        candidates = []
-        for i in range(len(lines)):
-            match = pat.match(lines[i])
-            if match:
-                # if it's at toplevel, it's already the best one
-                if lines[i][0] == 'c':
-                    return lines, i
-                # else add whitespace to candidate list
-                candidates.append((match.group(1), i))
-        if candidates:
-            # this will sort by whitespace, and by line number,
-            # less whitespace first
-            candidates.sort()
-            return lines, candidates[0][1]
-        else:
-            raise IOError('could not find class definition')
-
-    if ismethod(object):
-        object = object.__func__
-    if isfunction(object):
-        object = object.__code__
-    if istraceback(object):
-        object = object.tb_frame
-    if isframe(object):
-        object = object.f_code
-    if iscode(object):
-        if not hasattr(object, 'co_firstlineno'):
-            raise IOError('could not find function definition')
-        pat = re.compile(r'^(\s*def\s)|(.*(?<!\w)lambda(:|\s))|^(\s*@)')
-        pmatch = pat.match
-        # fperez - fix: sometimes, co_firstlineno can give a number larger than
-        # the length of lines, which causes an error.  Safeguard against that.
-        lnum = min(object.co_firstlineno,len(lines))-1
-        while lnum > 0:
-            if pmatch(lines[lnum]): break
-            lnum -= 1
-
-        return lines, lnum
-    raise IOError('could not find code object')
-
-import inspect
-inspect.findsource = findsource
-
+print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
 
 # -- General configuration ------------------------------------------------
 
@@ -159,9 +63,18 @@ extensions = [
     'numpydoc',
     'IPython.sphinxext.ipython_directive',
     'IPython.sphinxext.ipython_console_highlighting',
+    'sphinx_gallery.gen_gallery',
 ]
 
-extlinks = {'issue': ('https://github.com/xray/xray/issues/%s', 'GH')}
+extlinks = {'issue': ('https://github.com/pydata/xarray/issues/%s', 'GH'),
+            'pull': ('https://github.com/pydata/xarray/pull/%s', 'PR'),
+            }
+
+sphinx_gallery_conf = {'examples_dirs': 'gallery',
+                       'gallery_dirs': 'auto_gallery',
+                       'backreferences_dir': False,
+                       'expected_failing_examples': list(allowed_failures)
+                       }
 
 autosummary_generate = True
 
@@ -181,19 +94,17 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'xray'
-copyright = u'2014, xray Developers'
-
-import xray
+project = 'xarray'
+copyright = '2014-%s, xarray Developers' % datetime.datetime.now().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = xray.version.short_version
+version = xarray.__version__.split('+')[0]
 # The full version, including alpha/beta/rc tags.
-release = xray.__version__
+release = xarray.__version__
 
 # The language for content autogenerated by Sphinx. Refer to documentation
 # for a list of supported languages.
@@ -203,7 +114,7 @@ release = xray.__version__
 # non-false value, then it is used:
 #today = ''
 # Else, today_fmt is used as the format for a strftime call.
-#today_fmt = '%B %d, %Y'
+today_fmt = '%Y-%m-%d'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -238,22 +149,14 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-
-# on_rtd is whether we are on readthedocs.org, this line of code grabbed from
-# docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-
-# otherwise, readthedocs.org uses their theme by default, so no need to specify it
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    'logo_only': True,
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -267,17 +170,25 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = "_static/dataset-diagram-logo.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+html_favicon = '_static/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# Sometimes the savefig directory doesn't exist and needs to be created
+# https://github.com/ipython/ipython/issues/8733
+# becomes obsolete when we can pin ipython>=5.2; see doc/environment.yml
+ipython_savefig_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   '_build','html','_static')
+if not os.path.exists(ipython_savefig_dir):
+    os.makedirs(ipython_savefig_dir)
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -286,7 +197,7 @@ html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = today_fmt
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -326,7 +237,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'xraydoc'
+htmlhelp_basename = 'xarraydoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -346,8 +257,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'xray.tex', u'xray Documentation',
-   u'xray Developers', 'manual'),
+  ('index', 'xarray.tex', 'xarray Documentation',
+   'xarray Developers', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -376,8 +287,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'xray', u'xray Documentation',
-     [u'xray Developers'], 1)
+    ('index', 'xarray', 'xarray Documentation',
+     ['xarray Developers'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -390,8 +301,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'xray', u'xray Documentation',
-   u'xray Developers', 'xray', 'One line description of project.',
+  ('index', 'xarray', 'xarray Documentation',
+   'xarray Developers', 'xarray', 'N-D labeled arrays and datasets in Python.',
    'Miscellaneous'),
 ]
 
@@ -410,8 +321,10 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/2.7/', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None),
+    'python': ('https://docs.python.org/3/', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'numba': ('https://numba.pydata.org/numba-doc/latest/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
 }

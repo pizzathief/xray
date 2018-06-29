@@ -4,7 +4,7 @@ Toy weather data
 ================
 
 Here is an example of how to easily manipulate a toy weather dataset using
-xray and other recommended Python libraries:
+xarray and other recommended Python libraries:
 
 .. contents::
    :local:
@@ -17,7 +17,11 @@ Shared setup:
 .. ipython:: python
    :suppress:
 
-   execfile("examples/_code/weather_data_setup.py")
+    fpath = "examples/_code/weather_data_setup.py"
+    with open(fpath) as f:
+        code = compile(f.read(), fpath, 'exec')
+        exec(code)
+
 
 Examine a dataset with pandas_ and seaborn_
 -------------------------------------------
@@ -38,15 +42,9 @@ Examine a dataset with pandas_ and seaborn_
     @savefig examples_tmin_tmax_plot.png
     ds.mean(dim='location').to_dataframe().plot()
 
-.. ipython::
-    :verbatim:
 
-    In [6]: sns.pairplot(df.reset_index(), vars=ds.data_vars)
-    Out[6]: <seaborn.axisgrid.PairGrid at 0x7f0fd2368a10>
+.. ipython:: python
 
-.. image:: examples_pairplot.png
-
-.. .. ipython:: python
     @savefig examples_pairplot.png
     sns.pairplot(df.reset_index(), vars=ds.data_vars)
 
@@ -70,7 +68,7 @@ Monthly averaging
 
 .. ipython:: python
 
-    monthly_avg = ds.resample('1MS', dim='time', how='mean')
+    monthly_avg = ds.resample(time='1MS').mean()
 
     @savefig examples_tmin_tmax_plot_mean.png
     monthly_avg.sel(location='IA').to_dataframe().plot(style='s-')
@@ -95,12 +93,33 @@ not show any seasonal cycle.
     @savefig examples_anomalies_plot.png
     anomalies.mean('location').to_dataframe()[['tmin', 'tmax']].plot()
 
+.. _standardized monthly anomalies:
+
+Calculate standardized monthly anomalies
+----------------------------------------
+
+You can create standardized anomalies where the difference between the
+observations and the climatological monthly mean is
+divided by the climatological standard deviation.
+
+.. ipython:: python
+
+    climatology_mean = ds.groupby('time.month').mean('time')
+    climatology_std = ds.groupby('time.month').std('time')
+    stand_anomalies = xr.apply_ufunc(
+                                     lambda x, m, s: (x - m) / s,
+                                     ds.groupby('time.month'),
+                                     climatology_mean, climatology_std)
+
+    @savefig examples_standardized_anomalies_plot.png
+    stand_anomalies.mean('location').to_dataframe()[['tmin', 'tmax']].plot()
+
 .. _fill with climatology:
 
 Fill missing values with climatology
 ------------------------------------
 
-The :py:func:`~xray.Dataset.fillna` method on grouped objects lets you easily
+The :py:func:`~xarray.Dataset.fillna` method on grouped objects lets you easily
 fill missing values by group:
 
 .. ipython:: python
@@ -109,7 +128,7 @@ fill missing values by group:
     some_missing = ds.tmin.sel(time=ds['time.day'] > 15).reindex_like(ds)
     filled = some_missing.groupby('time.month').fillna(climatology.tmin)
 
-    both = xray.Dataset({'some_missing': some_missing, 'filled': filled})
+    both = xr.Dataset({'some_missing': some_missing, 'filled': filled})
     both
 
     df = both.sel(time='2000').mean('location').reset_coords(drop=True).to_dataframe()

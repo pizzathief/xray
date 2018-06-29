@@ -4,8 +4,8 @@
 Computation
 ###########
 
-The labels associated with :py:class:`~xray.DataArray` and
-:py:class:`~xray.Dataset` objects enables some powerful shortcuts for
+The labels associated with :py:class:`~xarray.DataArray` and
+:py:class:`~xarray.Dataset` objects enables some powerful shortcuts for
 computation, notably including aggregation and broadcasting by dimension
 names.
 
@@ -20,13 +20,13 @@ numpy) over all array values:
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
 
 .. ipython:: python
 
-    arr = xray.DataArray(np.random.randn(2, 3),
-                         [('x', ['a', 'b']), ('y', [10, 20, 30])])
+    arr = xr.DataArray(np.random.RandomState(0).randn(2, 3),
+                       [('x', ['a', 'b']), ('y', [10, 20, 30])])
     arr - 3
     abs(arr)
 
@@ -38,6 +38,12 @@ __ http://docs.scipy.org/doc/numpy/reference/ufuncs.html
 .. ipython:: python
 
     np.sin(arr)
+
+Use :py:func:`~xarray.where` to conditionally switch between values:
+
+.. ipython:: python
+
+    xr.where(arr > 0, 'positive', 'negative')
 
 Data arrays also implement many :py:class:`numpy.ndarray` methods:
 
@@ -51,22 +57,38 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
 Missing values
 ==============
 
-xray objects borrow the :py:meth:`~xray.DataArray.isnull`,
-:py:meth:`~xray.DataArray.notnull`, :py:meth:`~xray.DataArray.count`,
-:py:meth:`~xray.DataArray.dropna` and :py:meth:`~xray.DataArray.fillna` methods
-for working with missing data from pandas:
+xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
+:py:meth:`~xarray.DataArray.notnull`, :py:meth:`~xarray.DataArray.count`,
+:py:meth:`~xarray.DataArray.dropna`, :py:meth:`~xarray.DataArray.fillna`,
+:py:meth:`~xarray.DataArray.ffill`, and :py:meth:`~xarray.DataArray.bfill`
+methods for working with missing data from pandas:
 
 .. ipython:: python
 
-    x = xray.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'])
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'])
     x.isnull()
     x.notnull()
     x.count()
     x.dropna(dim='x')
     x.fillna(-1)
+    x.ffill('x')
+    x.bfill('x')
 
-Like pandas, xray uses the float value ``np.nan`` (not-a-number) to represent
+Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
+
+xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
+for filling missing values via 1D interpolation.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'],
+                     coords={'xx': xr.Variable('x', [0, 1, 1.1, 1.9, 3])})
+    x.interpolate_na(dim='x', method='linear', use_coordinate='xx')
+
+Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
+providing the ``use_coordinate`` keyword which facilitates a clear specification
+of which values to use as the index in the interpolation.
 
 Aggregation
 ===========
@@ -84,7 +106,7 @@ applied along particular dimension(s):
 
 If you need to figure out the axis number for a dimension yourself (say,
 for wrapping code designed to work with numpy arrays), you can use the
-:py:meth:`~xray.DataArray.get_axis_num` method:
+:py:meth:`~xarray.DataArray.get_axis_num` method:
 
 .. ipython:: python
 
@@ -94,16 +116,97 @@ These operations automatically skip missing values, like in pandas:
 
 .. ipython:: python
 
-    xray.DataArray([1, 2, np.nan, 3]).mean()
+    xr.DataArray([1, 2, np.nan, 3]).mean()
 
 If desired, you can disable this behavior by invoking the aggregation method
 with ``skipna=False``.
+
+.. _comput.rolling:
+
+Rolling window operations
+=========================
+
+``DataArray`` objects include a :py:meth:`~xarray.DataArray.rolling` method. This
+method supports rolling window aggregation:
+
+.. ipython:: python
+
+    arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5),
+                       dims=('x', 'y'))
+    arr
+
+:py:meth:`~xarray.DataArray.rolling` is applied along one dimension using the
+name of the dimension as a key (e.g. ``y``) and the window size as the value
+(e.g. ``3``).  We get back a ``Rolling`` object:
+
+.. ipython:: python
+
+    arr.rolling(y=3)
+
+The label position and minimum number of periods in the rolling window are
+controlled by the ``center`` and ``min_periods`` arguments:
+
+.. ipython:: python
+
+    arr.rolling(y=3, min_periods=2, center=True)
+
+Aggregation and summary methods can be applied directly to the ``Rolling`` object:
+
+.. ipython:: python
+
+    r = arr.rolling(y=3)
+    r.mean()
+    r.reduce(np.std)
+
+Note that rolling window aggregations are faster when bottleneck_ is installed.
+
+.. _bottleneck: https://github.com/kwgoodman/bottleneck/
+
+We can also manually iterate through ``Rolling`` objects:
+
+.. ipython:: python
+
+   @verbatim
+   for label, arr_window in r:
+      # arr_window is a view of x
+
+Finally, the rolling object has a ``construct`` method which returns a
+view of the original ``DataArray`` with the windowed dimension in
+the last position.
+You can use this for more advanced rolling operations such as strided rolling,
+windowed rolling, convolution, short-time FFT etc.
+
+.. ipython:: python
+
+    # rolling with 2-point stride
+    rolling_da = r.construct('window_dim', stride=2)
+    rolling_da
+    rolling_da.mean('window_dim', skipna=False)
+
+Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
+of the original array, it is memory efficient.
+You can also use ``construct`` to compute a weighted rolling sum:
+
+.. ipython:: python
+
+   weight = xr.DataArray([0.25, 0.5, 0.25], dims=['window'])
+   arr.rolling(y=3).construct('window').dot(weight)
+
+.. note::
+  numpy's Nan-aggregation functions such as ``nansum`` copy the original array.
+  In xarray, we internally use these functions in our aggregation methods
+  (such as ``.sum()``) if ``skipna`` argument is not specified or set to True.
+  This means ``rolling_da.mean('window_dim')`` is memory inefficient.
+  To avoid this, use ``skipna=False`` as the above example.
+
+
+.. _compute.broadcasting:
 
 Broadcasting by dimension name
 ==============================
 
 ``DataArray`` objects are automatically align themselves ("broadcasting" in
-the numpy parlance) by dimension name instead of axis order. With xray, you
+the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
 operations to work, as commonly done in numpy with :py:func:`np.reshape` or
 :py:const:`np.newaxis`.
@@ -113,12 +216,12 @@ arrays with different sizes aligned along different dimensions:
 
 .. ipython:: python
 
-    a = xray.DataArray([1, 2], [('x', ['a', 'b'])])
+    a = xr.DataArray([1, 2], [('x', ['a', 'b'])])
     a
-    b = xray.DataArray([-1, -2, -3], [('y', [10, 20, 30])])
+    b = xr.DataArray([-1, -2, -3], [('y', [10, 20, 30])])
     b
 
-With xray, we can apply binary mathematical operations to these arrays, and
+With xarray, we can apply binary mathematical operations to these arrays, and
 their dimensions are expanded automatically:
 
 .. ipython:: python
@@ -130,7 +233,7 @@ appeared:
 
 .. ipython:: python
 
-    c = xray.DataArray(np.arange(6).reshape(3, 2), [b['y'], a['x']])
+    c = xr.DataArray(np.arange(6).reshape(3, 2), [b['y'], a['x']])
     c
     a + c
 
@@ -140,34 +243,55 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
+You can explicitly broadcast xaray data structures by using the
+:py:func:`~xarray.broadcast` function:
+
+.. ipython:: python
+
+    a2, b2 = xr.broadcast(a, b)
+    a2
+    b2
+
 .. _math automatic alignment:
 
 Automatic alignment
 ===================
 
-xray enforces alignment between *index* :ref:`coordinates` (that is,
+xarray enforces alignment between *index* :ref:`coordinates` (that is,
 coordinates with the same name as a dimension, marked by ``*``) on objects used
 in binary operations.
 
 Similarly to pandas, this alignment is automatic for arithmetic on binary
-operations. Note that unlike pandas, this the result of a binary operation is
-by the *intersection* (not the union) of coordinate labels:
+operations. The default result of a binary operation is by the *intersection*
+(not the union) of coordinate labels:
 
 .. ipython:: python
 
-    arr + arr[:1]
+    arr = xr.DataArray(np.arange(3), [('x', range(3))])
+    arr + arr[:-1]
 
-If the result would be empty, an error is raised instead:
+If coordinate values for a dimension are missing on either argument, all
+matching dimensions must have the same size:
 
-.. ipython::
+.. ipython:: python
 
     @verbatim
-    In [1]: arr[:2] + arr[2:]
-    ValueError: no overlapping labels for some dimensions: ['x']
+    In [1]: arr + xr.DataArray([1, 2], dims='x')
+    ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
+
+
+However, one can explicitly change this default automatic alignment type ("inner")
+via :py:func:`~xarray.set_options()` in context manager:
+
+.. ipython:: python
+
+    with xr.set_options(arithmetic_join="outer"):
+        arr + arr[:1]
+    arr + arr[:1]
 
 Before loops or performance critical code, it's a good idea to align arrays
 explicitly (e.g., by putting them in the same Dataset or using
-:py:func:`~xray.align`) to avoid the overhead of repeated alignment with each
+:py:func:`~xarray.align`) to avoid the overhead of repeated alignment with each
 operation. See :ref:`align and reindex` for more details.
 
 .. note::
@@ -193,7 +317,7 @@ indexing turns 1D coordinates into scalar coordinates:
     # notice that the scalar coordinate 'x' is silently dropped
     arr[1] - arr[0]
 
-Still, xray will persist other coordinates in arithmetic, as long as there
+Still, xarray will persist other coordinates in arithmetic, as long as there
 are no conflicting values:
 
 .. ipython:: python
@@ -211,9 +335,9 @@ variables:
 
 .. ipython:: python
 
-    ds = xray.Dataset({'x_and_y': (('x', 'y'), np.random.randn(2, 3)),
-                       'x_only': ('x', np.random.randn(2))},
-                       coords=arr.coords)
+    ds = xr.Dataset({'x_and_y': (('x', 'y'), np.random.randn(3, 5)),
+                     'x_only': ('x', np.random.randn(3))},
+                     coords=arr.coords)
     ds > 0
 
 Datasets support most of the same methods found on data arrays:
@@ -223,20 +347,13 @@ Datasets support most of the same methods found on data arrays:
     ds.mean(dim='x')
     abs(ds)
 
-:py:meth:`~xray.Dataset.transpose` can also be used to reorder dimensions on
-all variables:
+Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
+alternatively you can use :py:meth:`~xarray.Dataset.apply` to apply a function
+to each variable in a dataset:
 
 .. ipython:: python
 
-    ds.transpose('y', 'x')
-
-Unfortunately, a limitation of the current version of numpy means that we
-cannot override ufuncs for datasets, because datasets cannot be written as
-a single array [1]_. :py:meth:`~xray.Dataset.apply` works around this
-limitation, by applying the given function to each variable in the dataset:
-
-.. ipython:: python
-
+    np.sin(ds)
     ds.apply(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
@@ -250,11 +367,95 @@ Arithmetic between two datasets matches data variables of the same name:
 
 .. ipython:: python
 
-    ds2 = xray.Dataset({'x_and_y': 0, 'x_only': 100})
+    ds2 = xr.Dataset({'x_and_y': 0, 'x_only': 100})
     ds - ds2
 
 Similarly to index based alignment, the result has the intersection of all
-matching variables, and ``ValueError`` is raised if the result would be empty.
+matching data variables.
 
-.. [1] When numpy 1.10 is released, we should be able to override ufuncs for
-       datasets by making use of ``__numpy_ufunc__``.
+.. _comput.wrapping-custom:
+
+Wrapping custom computation
+===========================
+
+It doesn't always make sense to do computation directly with xarray objects:
+
+  - In the inner loop of performance limited code, using xarray can add
+    considerable overhead compared to using NumPy or native Python types.
+    This is particularly true when working with scalars or small arrays (less
+    than ~1e6 elements). Keeping track of labels and ensuring their consistency
+    adds overhead, and xarray's core itself is not especially fast, because it's
+    written in Python rather than a compiled language like C. Also, xarray's
+    high level label-based APIs removes low-level control over how operations
+    are implemented.
+  - Even if speed doesn't matter, it can be important to wrap existing code, or
+    to support alternative interfaces that don't use xarray objects.
+
+For these reasons, it is often well-advised to write low-level routines that
+work with NumPy arrays, and to wrap these routines to work with xarray objects.
+However, adding support for labels on both :py:class:`~xarray.Dataset` and
+:py:class:`~xarray.DataArray` can be a bit of a chore.
+
+To make this easier, xarray supplies the :py:func:`~xarray.apply_ufunc` helper
+function, designed for wrapping functions that support broadcasting and
+vectorization on unlabeled arrays in the style of a NumPy
+`universal function <https://docs.scipy.org/doc/numpy-1.13.0/reference/ufuncs.html>`_ ("ufunc" for short).
+``apply_ufunc`` takes care of everything needed for an idiomatic xarray wrapper,
+including alignment, broadcasting, looping over ``Dataset`` variables (if
+needed), and merging of coordinates. In fact, many internal xarray
+functions/methods are written using ``apply_ufunc``.
+
+Simple functions that act independently on each value should work without
+any additional arguments:
+
+.. ipython:: python
+
+    squared_error = lambda x, y: (x - y) ** 2
+    arr1 = xr.DataArray([0, 1, 2, 3], dims='x')
+    xr.apply_ufunc(squared_error, arr1, 1)
+
+For using more complex operations that consider some array values collectively,
+it's important to understand the idea of "core dimensions" from NumPy's
+`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
+that should *not* be broadcast over. Usually, they correspond to the fundamental
+dimensions over which an operation is defined, e.g., the summed axis in
+``np.sum``. A good clue that core dimensions are needed is the presence of an
+``axis`` argument on the corresponding NumPy function.
+
+With ``apply_ufunc``, core dimensions are recognized by name, and then moved to
+the last dimension of any input arguments before applying the given function.
+This means that for functions that accept an ``axis`` argument, you usually need
+to set ``axis=-1``. As an example, here is how we would wrap
+:py:func:`numpy.linalg.norm` to calculate the vector norm:
+
+.. code-block:: python
+
+    def vector_norm(x, dim, ord=None):
+        return xr.apply_ufunc(np.linalg.norm, x,
+                              input_core_dims=[[dim]],
+                              kwargs={'ord': ord, 'axis': -1})
+
+.. ipython:: python
+   :suppress:
+
+    def vector_norm(x, dim, ord=None):
+        return xr.apply_ufunc(np.linalg.norm, x,
+                              input_core_dims=[[dim]],
+                              kwargs={'ord': ord, 'axis': -1})
+
+.. ipython:: python
+
+    vector_norm(arr1, dim='x')
+
+Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
+nicely with tools for building vectorized functions, like
+:func:`numpy.broadcast_arrays` and :func:`numpy.vectorize`. For high performance
+needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
+
+In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
+many functions when using dask by setting ``dask='parallelized'``. See
+:ref:`dask.automatic-parallelization` for details.
+
+:py:func:`~xarray.apply_ufunc` also supports some advanced options for
+controlling alignment of variables and the form of the result. See the
+docstring for full details and more examples.

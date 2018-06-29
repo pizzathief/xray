@@ -1,11 +1,11 @@
-.. currentmodule:: xray
+.. currentmodule:: xarray
 
 #############
 API reference
 #############
 
-This page provides an auto-generated summary of xray's API. For more details
-and examples, refer to the relevant chapter in the main part of the
+This page provides an auto-generated summary of xarray's API. For more details
+and examples, refer to the relevant chapters in the main part of the
 documentation.
 
 Top-level functions
@@ -14,9 +14,17 @@ Top-level functions
 .. autosummary::
    :toctree: generated/
 
+   apply_ufunc
    align
+   broadcast
    concat
+   merge
+   where
    set_options
+   full_like
+   zeros_like
+   ones_like
+   dot
 
 Dataset
 =======
@@ -37,9 +45,15 @@ Attributes
    :toctree: generated/
 
    Dataset.dims
+   Dataset.sizes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
+   Dataset.encoding
+   Dataset.indexes
+   Dataset.get_index
+   Dataset.chunks
+   Dataset.nbytes
 
 Dictionary interface
 --------------------
@@ -54,8 +68,8 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
-   Dataset.iteritems
-   Dataset.itervalues
+   Dataset.items
+   Dataset.values
 
 Dataset contents
 ----------------
@@ -66,10 +80,12 @@ Dataset contents
    Dataset.copy
    Dataset.assign
    Dataset.assign_coords
+   Dataset.assign_attrs
    Dataset.pipe
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
+   Dataset.expand_dims
    Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords
@@ -93,11 +109,32 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
-   Dataset.isel_points
-   Dataset.sel_points
    Dataset.squeeze
+   Dataset.interp
+   Dataset.interp_like
    Dataset.reindex
    Dataset.reindex_like
+   Dataset.set_index
+   Dataset.reset_index
+   Dataset.reorder_levels
+
+Missing value handling
+----------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.isnull
+   Dataset.notnull
+   Dataset.combine_first
+   Dataset.count
+   Dataset.dropna
+   Dataset.fillna
+   Dataset.ffill
+   Dataset.bfill
+   Dataset.interpolate_na
+   Dataset.where
+   Dataset.isin
 
 Computation
 -----------
@@ -108,9 +145,11 @@ Computation
    Dataset.apply
    Dataset.reduce
    Dataset.groupby
+   Dataset.groupby_bins
+   Dataset.rolling
    Dataset.resample
-   Dataset.transpose
    Dataset.diff
+   Dataset.quantile
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -126,15 +165,8 @@ Computation
 :py:attr:`~Dataset.std`
 :py:attr:`~Dataset.var`
 
-**Missing values**:
-:py:attr:`~Dataset.isnull`
-:py:attr:`~Dataset.notnull`
-:py:attr:`~Dataset.count`
-:py:attr:`~Dataset.dropna`
-:py:attr:`~Dataset.fillna`
-:py:attr:`~Dataset.where`
-
 **ndarray methods**:
+:py:attr:`~Dataset.astype`
 :py:attr:`~Dataset.argsort`
 :py:attr:`~Dataset.clip`
 :py:attr:`~Dataset.conj`
@@ -142,7 +174,9 @@ Computation
 :py:attr:`~Dataset.imag`
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
-:py:attr:`~Dataset.T`
+:py:attr:`~Dataset.cumsum`
+:py:attr:`~Dataset.cumprod`
+:py:attr:`~Dataset.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -151,6 +185,19 @@ Computation
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
 :py:attr:`~core.groupby.DatasetGroupBy.where`
+
+Reshaping and reorganizing
+--------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.transpose
+   Dataset.stack
+   Dataset.unstack
+   Dataset.shift
+   Dataset.roll
+   Dataset.sortby
 
 DataArray
 =========
@@ -170,15 +217,20 @@ Attributes
    DataArray.data
    DataArray.coords
    DataArray.dims
+   DataArray.sizes
    DataArray.name
    DataArray.attrs
    DataArray.encoding
+   DataArray.indexes
+   DataArray.get_index
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`
 :py:attr:`~DataArray.shape`
 :py:attr:`~DataArray.size`
 :py:attr:`~DataArray.dtype`
+:py:attr:`~DataArray.nbytes`
+:py:attr:`~DataArray.chunks`
 
 DataArray contents
 ------------------
@@ -187,8 +239,11 @@ DataArray contents
    :toctree: generated/
 
    DataArray.assign_coords
+   DataArray.assign_attrs
+   DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
+   DataArray.expand_dims
    DataArray.drop
    DataArray.reset_coords
    DataArray.copy
@@ -209,11 +264,42 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
-   DataArray.isel_points
-   DataArray.sel_points
    DataArray.squeeze
+   DataArray.interp
+   DataArray.interp_like
    DataArray.reindex
    DataArray.reindex_like
+   DataArray.set_index
+   DataArray.reset_index
+   DataArray.reorder_levels
+
+Missing value handling
+----------------------
+
+.. autosummary::
+  :toctree: generated/
+
+  DataArray.isnull
+  DataArray.notnull
+  DataArray.combine_first
+  DataArray.count
+  DataArray.dropna
+  DataArray.fillna
+  DataArray.ffill
+  DataArray.bfill
+  DataArray.interpolate_na
+  DataArray.where
+  DataArray.isin
+
+Comparisons
+-----------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.equals
+   DataArray.identical
+   DataArray.broadcast_equals
 
 Computation
 -----------
@@ -223,10 +309,14 @@ Computation
 
    DataArray.reduce
    DataArray.groupby
+   DataArray.groupby_bins
+   DataArray.rolling
+   DataArray.dt
    DataArray.resample
-   DataArray.transpose
    DataArray.get_axis_num
    DataArray.diff
+   DataArray.dot
+   DataArray.quantile
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -242,14 +332,6 @@ Computation
 :py:attr:`~DataArray.std`
 :py:attr:`~DataArray.var`
 
-**Missing values**:
-:py:attr:`~DataArray.isnull`
-:py:attr:`~DataArray.notnull`
-:py:attr:`~DataArray.count`
-:py:attr:`~DataArray.dropna`
-:py:attr:`~DataArray.fillna`
-:py:attr:`~DataArray.where`
-
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`
 :py:attr:`~DataArray.clip`
@@ -260,6 +342,9 @@ Computation
 :py:attr:`~DataArray.round`
 :py:attr:`~DataArray.real`
 :py:attr:`~DataArray.T`
+:py:attr:`~DataArray.cumsum`
+:py:attr:`~DataArray.cumprod`
+:py:attr:`~DataArray.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
@@ -268,24 +353,34 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`
 :py:attr:`~core.groupby.DataArrayGroupBy.where`
 
-Comparisons
------------
+
+Reshaping and reorganizing
+--------------------------
 
 .. autosummary::
    :toctree: generated/
 
-   DataArray.equals
-   DataArray.identical
-   DataArray.broadcast_equals
-
+   DataArray.transpose
+   DataArray.stack
+   DataArray.unstack
+   DataArray.shift
+   DataArray.roll
+   DataArray.sortby
 
 .. _api.ufuncs:
 
 Universal functions
 ===================
 
+.. warning::
+
+   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and dask objects. This obliviates the need
+   for the ``xarray.ufuncs`` module, which should not be used for new code
+   unless compatibility with versions of NumPy prior to v1.13 is required.
+
 This functions are copied from NumPy, but extended to work on NumPy arrays,
-dask arrays and all xray objects. You can find them in the ``xray.ufuncs``
+dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
 module:
 
 :py:attr:`~ufuncs.angle`
@@ -359,14 +454,24 @@ Dataset methods
 
    open_dataset
    open_mfdataset
+   open_rasterio
+   open_zarr
    Dataset.to_netcdf
+   Dataset.to_zarr
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dask_dataframe
+   Dataset.to_dict
    Dataset.from_dataframe
+   Dataset.from_dict
    Dataset.close
+   Dataset.compute
+   Dataset.persist
    Dataset.load
    Dataset.chunk
+   Dataset.filter_by_attrs
+   Dataset.info
 
 DataArray methods
 -----------------
@@ -374,33 +479,81 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
+   open_dataarray
    DataArray.to_dataset
+   DataArray.to_netcdf
    DataArray.to_pandas
    DataArray.to_series
    DataArray.to_dataframe
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_iris
+   DataArray.from_iris
+   DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2
+   DataArray.from_dict
+   DataArray.close
+   DataArray.compute
+   DataArray.persist
    DataArray.load
    DataArray.chunk
 
-Backends (experimental)
------------------------
-
-These backends provide a low-level interface for lazily loading data from
-external file-formats or protocols, and can be manually invoked to create
-arguments for the ``from_store`` and ``dump_to_store`` Dataset methods.
+GroupBy objects
+===============
 
 .. autosummary::
    :toctree: generated/
 
-   backends.NetCDF4DataStore
-   backends.H5NetCDFStore
-   backends.PydapDataStore
-   backends.ScipyDataStore
+   core.groupby.DataArrayGroupBy
+   core.groupby.DataArrayGroupBy.apply
+   core.groupby.DataArrayGroupBy.reduce
+   core.groupby.DatasetGroupBy
+   core.groupby.DatasetGroupBy.apply
+   core.groupby.DatasetGroupBy.reduce
 
+Rolling objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.rolling.DataArrayRolling
+   core.rolling.DataArrayRolling.construct
+   core.rolling.DataArrayRolling.reduce
+   core.rolling.DatasetRolling
+   core.rolling.DatasetRolling.construct
+   core.rolling.DatasetRolling.reduce
+
+Resample objects
+================
+
+Resample objects also implement the GroupBy interface
+(methods like ``apply()``, ``reduce()``, ``mean()``, ``sum()``, etc.).
+
+.. autosummary::
+   :toctree: generated/
+
+   core.resample.DataArrayResample
+   core.resample.DataArrayResample.asfreq
+   core.resample.DataArrayResample.backfill
+   core.resample.DataArrayResample.interpolate
+   core.resample.DataArrayResample.nearest
+   core.resample.DataArrayResample.pad
+   core.resample.DatasetResample
+   core.resample.DatasetResample.asfreq
+   core.resample.DatasetResample.backfill
+   core.resample.DatasetResample.interpolate
+   core.resample.DatasetResample.nearest
+   core.resample.DatasetResample.pad
+
+Custom Indexes
+==============
+.. autosummary::
+   :toctree: generated/
+
+   CFTimeIndex
 
 Plotting
 ========
@@ -408,6 +561,7 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
+   DataArray.plot
    plot.plot
    plot.contourf
    plot.contour
@@ -416,3 +570,48 @@ Plotting
    plot.line
    plot.pcolormesh
    plot.FacetGrid
+
+Testing
+=======
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.assert_equal
+   testing.assert_identical
+   testing.assert_allclose
+
+Exceptions
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+   MergeError
+   SerializationWarning
+
+Advanced API
+============
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.variables
+   DataArray.variable
+   Variable
+   IndexVariable
+   as_variable
+   register_dataset_accessor
+   register_dataarray_accessor
+
+These backends provide a low-level interface for lazily loading data from
+external file-formats or protocols, and can be manually invoked to create
+arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4DataStore
+   backends.H5NetCDFStore
+   backends.PydapDataStore
+   backends.ScipyDataStore

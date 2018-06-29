@@ -2,17 +2,17 @@
 Quick overview
 ##############
 
-Here are some quick examples of what you can do with :py:class:`xray.DataArray`
+Here are some quick examples of what you can do with :py:class:`xarray.DataArray`
 objects. Everything is explained in much more detail in the rest of the
 documentation.
 
-To begin, import numpy, pandas and xray:
+To begin, import numpy, pandas and xarray using their customary abbreviations:
 
 .. ipython:: python
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
 
 Create a DataArray
 ------------------
@@ -22,8 +22,8 @@ array or list, with optional *dimensions* and *coordinates*:
 
 .. ipython:: python
 
-    xray.DataArray(np.random.randn(2, 3))
-    data = xray.DataArray(np.random.randn(2, 3), [('x', ['a', 'b']), ('y', [-2, 0, 2])])
+    xr.DataArray(np.random.randn(2, 3))
+    data = xr.DataArray(np.random.randn(2, 3), coords={'x': ['a', 'b']}, dims=('x', 'y'))
     data
 
 If you supply a pandas :py:class:`~pandas.Series` or
@@ -31,7 +31,7 @@ If you supply a pandas :py:class:`~pandas.Series` or
 
 .. ipython:: python
 
-    xray.DataArray(pd.Series(range(3), index=list('abc'), name='foo'))
+    xr.DataArray(pd.Series(range(3), index=list('abc'), name='foo'))
 
 Here are the key properties for a ``DataArray``:
 
@@ -47,7 +47,7 @@ Here are the key properties for a ``DataArray``:
 Indexing
 --------
 
-xray supports four kind of indexing. These operations are just as fast as in
+xarray supports four kind of indexing. These operations are just as fast as in
 pandas, because we borrow pandas' indexing machinery.
 
 .. ipython:: python
@@ -88,8 +88,8 @@ need to insert dummy dimensions for alignment:
 
 .. ipython:: python
 
-    a = xray.DataArray(np.random.randn(3), [data.coords['y']])
-    b = xray.DataArray(np.random.randn(4), dims='z')
+    a = xr.DataArray(np.random.randn(3), [data.coords['y']])
+    b = xr.DataArray(np.random.randn(4), dims='z')
 
     a
     b
@@ -112,45 +112,69 @@ Operations also align based on index labels:
 GroupBy
 -------
 
-xray supports grouped operations using a very similar API to pandas:
+xarray supports grouped operations using a very similar API to pandas:
 
 .. ipython:: python
 
-    labels = xray.DataArray(['E', 'F', 'E'], [data.coords['y']], name='labels')
+    labels = xr.DataArray(['E', 'F', 'E'], [data.coords['y']], name='labels')
     labels
     data.groupby(labels).mean('y')
     data.groupby(labels).apply(lambda x: x - x.min())
 
-Convert to pandas
------------------
+pandas
+------
 
-A key feature of xray is robust conversion to and from pandas objects:
-
-.. ipython:: python
-
-    data.to_series()
-    data.to_pandas()
-
-Datasets and NetCDF
--------------------
-
-:py:class:`xray.Dataset` is a dict-like container of ``DataArray`` objects that share
-index labels and dimensions. It looks a lot like a netCDF file:
+Xarray objects can be easily converted to and from pandas objects:
 
 .. ipython:: python
 
-    ds = data.to_dataset()
+    series = data.to_series()
+    series
+
+    # convert back
+    series.to_xarray()
+
+Datasets
+--------
+
+:py:class:`xarray.Dataset` is a dict-like container of aligned ``DataArray``
+objects. You can think of it as a multi-dimensional generalization of the
+:py:class:`pandas.DataFrame`:
+
+.. ipython:: python
+
+    ds = xr.Dataset({'foo': data, 'bar': ('x', [1, 2]), 'baz': np.pi})
     ds
 
-You can do almost everything you can do with ``DataArray`` objects with
-``Dataset`` objects if you prefer to work with multiple variables at once.
+Use dictionary indexing to pull out ``Dataset`` variables as ``DataArray``
+objects:
 
-Datasets also let you easily read and write netCDF files:
+.. ipython:: python
+
+    ds['foo']
+
+Variables in datasets can have different ``dtype`` and even different
+dimensions, but all dimensions are assumed to refer to points in the same shared
+coordinate system.
+
+You can do almost everything you can do with ``DataArray`` objects with
+``Dataset`` objects (including indexing and arithmetic) if you prefer to work
+with multiple variables at once.
+
+NetCDF
+------
+
+NetCDF is the recommended binary serialization format for xarray objects. Users
+from the geosciences will recognize that the :py:class:`~xarray.Dataset` data
+model looks very similar to a netCDF file (which, in fact, inspired it).
+
+You can directly read and write xarray objects to disk using :py:meth:`~xarray.Dataset.to_netcdf`, :py:func:`~xarray.open_dataset` and
+:py:func:`~xarray.open_dataarray`:
 
 .. ipython:: python
 
     ds.to_netcdf('example.nc')
-    xray.open_dataset('example.nc')
+    xr.open_dataset('example.nc')
 
 .. ipython:: python
    :suppress:

@@ -1,6 +1,14 @@
 *.py[cod]
 __pycache__
 
+# example caches from Hypothesis
+.hypothesis/
+
+# temp files from docs build
+doc/auto_gallery
+doc/example.nc
+doc/savefig
+
 # C extensions
 *.so
 
@@ -26,6 +34,16 @@ pip-log.txt
 .coverage
 .tox
 nosetests.xml
+.cache
+.ropeproject/
+.tags*
+.testmon*
+.tmontmp/
+.pytest_cache
+dask-worker-space/
+
+# asv environments
+.asv
 
 # Translations
 *.mo
@@ -35,14 +53,18 @@ nosetests.xml
 .project
 .pydevproject
 
-# PyCharm and Vim
+# IDEs
 .idea
 *.swp
+.DS_Store
+.vscode/
 
-# xray specific
+# xarray specific
 doc/_build
 doc/generated
-doc/_static/*.png
-xray/version.py
+xarray/version.py
+
+# Sync tools
+Icon*
 
 .ipynb_checkpoints
